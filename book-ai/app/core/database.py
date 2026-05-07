@@ -31,6 +31,8 @@ def get_db():
 
 def init_db() -> None:
     """Create all tables and enable pgvector extension."""
+    import app.models  # noqa: F401
+
     with engine.connect() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         conn.commit()

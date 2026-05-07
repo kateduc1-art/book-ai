@@ -6,9 +6,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-import numpy as np
 from sqlalchemy.orm import Session
-from pgvector.sqlalchemy import Vector
 
 from app.core.logging import get_logger
 from app.models.chunk import Chunk
@@ -64,20 +62,18 @@ class PgVectorStore(VectorStore):
         Cosine similarity search using pgvector's <=> operator.
         Returns list of (Chunk, score) sorted by similarity descending.
         """
-        from sqlalchemy import func, cast
-
-        query_vec = cast(query_vector, Vector(len(query_vector)))
+        distance = Chunk.embedding.cosine_distance(query_vector)
 
         results = (
             db.query(
                 Chunk,
-                (1 - Chunk.embedding.op("<=>")(query_vec)).label("score"),
+                (1 - distance).label("score"),
             )
             .filter(
                 Chunk.document_id == document_id,
                 Chunk.embedding.isnot(None),
             )
-            .order_by(Chunk.embedding.op("<=>")(query_vec))
+            .order_by(distance)
             .limit(top_k * 3)  # fetch more, filter by min_score after
             .all()
         )

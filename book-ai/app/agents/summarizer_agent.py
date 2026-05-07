@@ -7,10 +7,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from agno.agent import Agent
-from agno.models.openai import OpenAIChat
-
-from app.core.config import settings
+from app.agents.openai_chat_client import OpenAIChatClient
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -56,14 +53,7 @@ class SummarizerAgent:
     """Generates structured summaries from chapter Markdown content."""
 
     def __init__(self) -> None:
-        self._agent = Agent(
-            model=OpenAIChat(
-                id=settings.openai_model,
-                api_key=settings.openai_api_key,
-            ),
-            system_prompt=_SYSTEM_PROMPT,
-            markdown=False,
-        )
+        self._client = OpenAIChatClient()
 
     def summarize(self, chapter_title: str, chapter_markdown: str) -> dict[str, Any]:
         """
@@ -81,8 +71,7 @@ Conteúdo:
 Gere o resumo estruturado conforme as instruções."""
 
         try:
-            response = self._agent.run(prompt)
-            raw = response.content if hasattr(response, "content") else str(response)
+            raw = self._client.run(_SYSTEM_PROMPT, prompt, json_response=True)
             data = _parse_summary_response(raw)
             logger.info(f"SummarizerAgent: summarized chapter '{chapter_title}'")
             return data

@@ -147,7 +147,10 @@ def summarize_chapter(
         job_id=job.id,
         job_type=job.job_type,
         status=job.status,
-        message="Summarization started. Poll /jobs/{job_id} for results.",
+        message=(
+            "Summarization started. Poll "
+            f"/documents/{chapter.document_id}/jobs/{job.id} for results."
+        ),
     )
 
 
@@ -234,7 +237,10 @@ def rewrite_chapter(
         job_id=job.id,
         job_type=job.job_type,
         status=job.status,
-        message="Rewriting started. Poll /jobs/{job_id} for results.",
+        message=(
+            "Rewriting started. Poll "
+            f"/documents/{chapter.document_id}/jobs/{job.id} for results."
+        ),
     )
 
 

@@ -520,3 +520,146 @@ pytest -v --tb=short
 - [ ] Deduplicação semântica
 - [ ] Painel administrativo
 - [ ] Suporte a Gemini e Anthropic
+
+---
+
+## Atualizacao Tecnica - 2026-05-07
+
+Depois do teste ponta a ponta da API com o PDF `Refatorando com padrões de projeto_ Um guia em Java.pdf`, foram feitas correcoes para estabilizar o fluxo completo dos endpoints antes da construcao da interface web.
+
+### Commit sugerido
+
+```text
+fix: stabilize API endpoint flow
+```
+
+### Documento de referencia da diff
+
+A diff documentada foi salva em:
+
+```text
+2026-05-07-fix-api-endpoint-flow.md
+```
+
+Esse arquivo registra o contexto, as alteracoes por modulo, os endpoints testados e o resultado da validacao.
+
+### Mudancas principais
+
+#### Inicializacao dos modelos SQLAlchemy
+
+Arquivos alterados:
+
+- `app/models/__init__.py`
+- `app/core/database.py`
+
+O pacote `app.models` agora importa explicitamente `Document`, `Chunk`, `Chapter` e `Job`. O `init_db()` carrega esses modelos antes de executar `Base.metadata.create_all()`.
+
+Isso corrige o erro em `POST /documents/upload`, no qual o SQLAlchemy nao conseguia resolver relationships como `Document.chunks`.
+
+#### Busca vetorial com pgvector
+
+Arquivo alterado:
+
+- `app/services/vector_store.py`
+
+A busca vetorial passou a usar:
+
+```python
+Chunk.embedding.cosine_distance(query_vector)
+```
+
+em vez de montar manualmente o operador `<=>` com `cast(...)`.
+
+Isso corrige o erro:
+
+```text
+ValueError: expected ndim to be 1
+```
+
+que acontecia em `POST /documents/{document_id}/filter`.
+
+#### Agentes com OpenAI SDK direto
+
+Arquivos alterados:
+
+- `app/agents/openai_chat_client.py`
+- `app/agents/relevance_validator_agent.py`
+- `app/agents/summarizer_agent.py`
+- `app/agents/rewriter_agent.py`
+
+Foi criado um wrapper pequeno chamado `OpenAIChatClient`, usado pelos agentes de validacao, resumo e reescrita.
+
+Com isso, os agentes deixam de depender do adapter `agno.models.openai.OpenAIChat` no caminho critico de execucao. A dependencia `agno` ainda existe no projeto, mas os agentes atuais usam o SDK oficial da OpenAI diretamente para evitar incompatibilidades de versao.
+
+#### Mensagens de polling dos jobs de capitulo
+
+Arquivo alterado:
+
+- `app/api/routes/chapters.py`
+
+As mensagens retornadas por:
+
+- `POST /chapters/{chapter_id}/summarize`
+- `POST /chapters/{chapter_id}/rewrite`
+
+agora apontam para a rota correta de acompanhamento:
+
+```text
+GET /documents/{document_id}/jobs/{job_id}
+```
+
+A API nao possui uma rota global `/jobs/{job_id}`.
+
+### Endpoints validados
+
+Foram testados com sucesso:
+
+| Metodo | Path |
+|---|---|
+| `GET` | `/health` |
+| `POST` | `/documents/upload` |
+| `POST` | `/documents/{document_id}/index` |
+| `GET` | `/documents/{document_id}` |
+| `GET` | `/documents/{document_id}/jobs/{job_id}` |
+| `POST` | `/documents/{document_id}/filter` |
+| `POST` | `/documents/{document_id}/validate-relevance` |
+| `POST` | `/chapters/build` |
+| `GET` | `/chapters/{chapter_id}` |
+| `POST` | `/chapters/{chapter_id}/summarize` |
+| `POST` | `/chapters/{chapter_id}/rewrite` |
+| `GET` | `/exports/{chapter_id}/markdown` |
+| `GET` | `/exports/{chapter_id}/docx` |
+
+### Resultado do teste com PDF real
+
+| Item | Resultado |
+|---|---|
+| Documento | `098611b6-4930-442b-8f4e-bf5a87c4cbf2` |
+| PDF processado | 153 paginas |
+| Chunks criados | 412 |
+| Capitulo criado | `c828ad3b-e974-48ad-8f12-b9f715dc7dfc` |
+| Export Markdown | `200 OK`, 2235 bytes |
+| Export DOCX | `200 OK`, 37729 bytes |
+
+### Validacao final
+
+```powershell
+docker compose up --build -d
+docker compose exec -T app pytest -q
+```
+
+Resultado:
+
+```text
+18 passed
+```
+
+Health check:
+
+```json
+{
+  "status": "ok",
+  "app": "Book AI",
+  "version": "0.1.0"
+}
+```

@@ -7,10 +7,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from agno.agent import Agent
-from agno.models.openai import OpenAIChat
-
-from app.core.config import settings
+from app.agents.openai_chat_client import OpenAIChatClient
 from app.core.logging import get_logger
 from app.schemas.filter_schema import ChunkValidationResult
 
@@ -68,14 +65,7 @@ class RelevanceValidatorAgent:
     """Validates whether a text chunk is relevant to given topics."""
 
     def __init__(self) -> None:
-        self._agent = Agent(
-            model=OpenAIChat(
-                id=settings.openai_model,
-                api_key=settings.openai_api_key,
-            ),
-            system_prompt=_SYSTEM_PROMPT,
-            markdown=False,
-        )
+        self._client = OpenAIChatClient()
 
     def validate(
         self,
@@ -89,8 +79,7 @@ class RelevanceValidatorAgent:
         prompt = _build_user_prompt(topics, chunk_text, page, paragraph)
 
         try:
-            response = self._agent.run(prompt)
-            raw = response.content if hasattr(response, "content") else str(response)
+            raw = self._client.run(_SYSTEM_PROMPT, prompt, json_response=True)
             data = _parse_response(raw)
 
             return ChunkValidationResult(
