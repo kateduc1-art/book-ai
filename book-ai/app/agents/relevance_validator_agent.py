@@ -1,13 +1,13 @@
 """
 RelevanceValidatorAgent — decides if a text chunk is genuinely relevant to a topic.
-Uses Agno with an OpenAI LLM backend.
+Uses the configured chat provider.
 """
 from __future__ import annotations
 
 import json
 from typing import Any
 
-from app.agents.openai_chat_client import OpenAIChatClient
+from app.agents.chat_provider import get_chat_provider
 from app.core.logging import get_logger
 from app.schemas.filter_schema import ChunkValidationResult
 
@@ -65,7 +65,7 @@ class RelevanceValidatorAgent:
     """Validates whether a text chunk is relevant to given topics."""
 
     def __init__(self) -> None:
-        self._client = OpenAIChatClient()
+        self._chat_provider = get_chat_provider()
 
     def validate(
         self,
@@ -79,7 +79,7 @@ class RelevanceValidatorAgent:
         prompt = _build_user_prompt(topics, chunk_text, page, paragraph)
 
         try:
-            raw = self._client.run(_SYSTEM_PROMPT, prompt, json_response=True)
+            raw = self._chat_provider.generate(_SYSTEM_PROMPT, prompt, json_response=True)
             data = _parse_response(raw)
 
             return ChunkValidationResult(

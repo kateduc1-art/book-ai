@@ -663,3 +663,71 @@ Health check:
   "version": "0.1.0"
 }
 ```
+
+---
+
+## Atualizacao Tecnica - 2026-05-07 - Chat Provider
+
+Foi iniciada a evolucao para permitir escolher o modelo de LLM sem alterar os agentes.
+
+### Commit sugerido
+
+```text
+feat: add configurable chat provider
+```
+
+### Documento de referencia
+
+```text
+2026-05-07-feat-chat-provider-selection.md
+```
+
+### O que mudou
+
+Foi criada uma camada de provider em:
+
+```text
+app/agents/chat_provider.py
+```
+
+Os agentes de validacao, resumo e reescrita agora usam `get_chat_provider()` em vez de depender diretamente de um client especifico.
+
+### Variaveis novas
+
+```env
+CHAT_PROVIDER=openai
+CHAT_MODEL=
+OPENAI_BASE_URL=
+```
+
+Comportamento:
+
+- `CHAT_PROVIDER=openai`: usa a API oficial da OpenAI.
+- `CHAT_PROVIDER=openai-compatible`: usa o SDK OpenAI apontando para `OPENAI_BASE_URL`.
+- `CHAT_MODEL`: se definido, sobrescreve `OPENAI_MODEL` apenas para os agentes de chat.
+- Se `CHAT_MODEL` estiver vazio, o app continua usando `OPENAI_MODEL`.
+
+### Exemplos
+
+OpenAI:
+
+```env
+CHAT_PROVIDER=openai
+CHAT_MODEL=gpt-4.1-mini
+OPENAI_API_KEY=sk-...
+```
+
+Endpoint compativel com OpenAI:
+
+```env
+CHAT_PROVIDER=openai-compatible
+CHAT_MODEL=nome-do-modelo
+OPENAI_BASE_URL=http://localhost:1234/v1
+OPENAI_API_KEY=local-ou-chave-do-provider
+```
+
+### Limite atual
+
+Esta etapa cobre apenas modelos de chat/LLM usados por validacao, resumo e reescrita.
+
+Embeddings continuam usando `EMBEDDING_MODEL` via OpenAI. A coluna `chunks.embedding` segue fixa em `Vector(1536)`, adequada para `text-embedding-3-small`.

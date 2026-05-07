@@ -16,7 +16,12 @@ class Settings(BaseSettings):
     # ── OpenAI ───────────────────────────────────────────────
     openai_api_key: str = ""
     openai_model: str = "gpt-4.1-mini"
+    openai_base_url: str = ""
     embedding_model: str = "text-embedding-3-small"
+
+    # Chat / LLM provider
+    chat_provider: str = "openai"
+    chat_model: str = ""
 
     # ── Storage ───────────────────────────────────────────────
     upload_dir: str = "storage/uploads"

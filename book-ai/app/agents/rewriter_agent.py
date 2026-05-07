@@ -7,7 +7,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from app.agents.openai_chat_client import OpenAIChatClient
+from app.agents.chat_provider import get_chat_provider
 from app.core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -33,7 +33,7 @@ class RewriterAgent:
     """Rewrites chapter content in a more readable and didactic style."""
 
     def __init__(self) -> None:
-        self._client = OpenAIChatClient()
+        self._chat_provider = get_chat_provider()
 
     def rewrite(
         self,
@@ -74,7 +74,7 @@ Conteúdo original:
 Reescreva mantendo fidelidade total ao conteúdo, melhorando clareza e fluidez."""
 
         try:
-            rewritten = self._client.run(_SYSTEM_PROMPT, prompt)
+            rewritten = self._chat_provider.generate(_SYSTEM_PROMPT, prompt)
 
             # Build a simple source_map from the sources list
             source_map = self._build_source_map(sources or [], rewritten)
